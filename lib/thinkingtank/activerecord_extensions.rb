@@ -3,12 +3,18 @@ require 'active_record'
 
 class << ActiveRecord::Base
     @indexable = false
-    def search(*args)
+
+    # renamed because of naming conflicts with meta_search for example
+    def search_tank(*args)
         return indextank_search(true, *args)
     end
-    def search_raw(*args)
+    def search_tank_raw(*args)
         return indextank_search(false, *args)
     end
+
+    # defining aliases in case of no conflicting methods
+    alias_method :search, :search_tank if not ActiveRecord::Base.respond_to? :search
+    alias_method :search_raw, :search_tank_raw
 
     def define_index(name = nil, &block)
         include ThinkingTank::IndexMethods
@@ -40,12 +46,14 @@ class << ActiveRecord::Base
             end
         end
 
-        options.slice!(:snippet, :fetch, :function)
+        # added :len as parameter option
+        options.slice!(:snippet, :fetch, :function, :len)
 
         it = ThinkingTank::Configuration.instance.client
-        models = []
+
         res = it.search("__any:(#{query.to_s}) __type:#{self.name}", options)
         if models
+            models = []
             res['results'].each do |doc|
                 type, docid = doc['docid'].split(" ", 2)
                 models << self.find(id=docid)
@@ -60,3 +68,4 @@ class << ActiveRecord::Base
         end
     end
 end
+
