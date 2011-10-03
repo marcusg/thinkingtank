@@ -5,7 +5,7 @@ require 'active_record'
 def load_models
     app_root = ThinkingTank::Configuration.instance.app_root
     dirs = ["#{app_root}/app/models/"] + Dir.glob("#{app_root}/vendor/plugins/*/app/models/")
-    
+
     dirs.each do |base|
         Dir["#{base}**/*.rb"].each do |file|
             model_name = file.gsub(/^#{base}([\w_\/\\]+)\.rb/, '\1')
@@ -70,31 +70,23 @@ def reindex_models
     end
 end
 
-def reindex(klass, batch = false)
+def reindex(klass, per_batch = 100)
     it = ThinkingTank::Configuration.instance.client
     docs = []
     count = 0
 
-    puts "Indexing #{klass.name}:"
+    puts "Indexing #{klass.name} with #{per_batch} docs per batch process:"
     klass.find(:all).each do |obj|
         docs << obj.to_indexable_obj
-        
-        if docs.size >= 20
-            doc_names = docs.map { |doc| doc['docid'] }
-            puts doc_names .join(',')
-            it.batch_insert docs
-            count += docs.size
-            docs = []
-        end
     end
-    if docs.size > 0
-        doc_names = docs.map { |doc| doc['docid'] }
-        puts doc_names .join(',')
-        count += docs.size
-        it.batch_insert docs
+
+    docs.in_groups_of(per_batch, false).each do |group|
+        print "."
+        it.batch_insert group
+        count += group.size
     end
-    
-    puts "#{klass.name}s indexed : #{count}"
+
+    puts " -> #{klass.name}s indexed : #{count}"
 end
 
 namespace :indextank do
@@ -110,3 +102,4 @@ namespace :it do
     desc "An alias for indextank:reindex"
     task :reindex => "indextank:reindex"
 end
+
