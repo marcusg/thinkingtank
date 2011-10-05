@@ -31,7 +31,7 @@ module ThinkingTank
         attr_accessor :app_root, :client
         def initialize
             self.app_root = Rails.root if defined?(Rails.root)
-            self.app_root = RAILS_ROOT if defined?(RAILS_ROOT)
+            self.app_root = RAILS_ROOT if defined?(RAILS_ROOT) and not defined?(Rails.root)
             self.app_root = Merb.root  if defined?(Merb)
             self.app_root ||= Dir.pwd
 
@@ -55,21 +55,21 @@ module ThinkingTank
             end
         end
     end
-    
+
     module IndexMethods
 
         def update_index
             it = ThinkingTank::Configuration.instance.client
             idx_obj = self.to_indexable_obj
-            
+
             it.document(idx_obj['docid']).add(idx_obj['fields'])
         end
 
         def to_indexable_obj
-            
+
             idx_obj = {}
             idx_obj['docid'] = self.class.name + ' ' + self.id.to_s
-            
+
             fields = {}
             self.class.thinkingtank_builder.index_fields.each do |field|
                 val = self.instance_eval(field.to_s)
@@ -77,7 +77,7 @@ module ThinkingTank
             end
             fields[:__any] = fields.values.join " . "
             fields[:__type] = self.class.name
-            
+
             idx_obj['fields'] = fields
 
             return idx_obj
@@ -86,8 +86,9 @@ module ThinkingTank
         def delete_from_index
             it = ThinkingTank::Configuration.instance.client
             docid = self.class.name + ' ' + self.id.to_s
-            it.document(docid).delete()            
+            it.document(docid).delete()
         end
     end
 
 end
+
