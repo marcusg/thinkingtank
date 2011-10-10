@@ -52,6 +52,10 @@ class << ActiveRecord::Base
         it = ThinkingTank::Configuration.instance.client
 
         res = it.search("__any:(#{query.to_s}) __type:#{self.name}", options)
+
+        # if the tank is empty for one class -> res == "Currently unable to perform the requested search"
+        res = { 'results' => [] } if res.is_a? String # catch the error
+
         if models
             models = []
             res['results'].each do |doc|
